@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f2ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Flashcards – Outilothèque</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='14' width='40' height='30' rx='6' fill='%23ffc94d' transform='rotate(-10 26 29)'/%3E%3Crect x='16' y='20' width='42' height='30' rx='6' fill='%232f54eb'/%3E%3Cpath d='M30 35h14' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f5f2ec; --ink:#1d2433; --muted:#6b7180; --line:#e3ddd2; --panel:#fffdf9;
+  --accent:#2f54eb; --accent-2:#ffc94d; --accent-soft:#e8edff;
+  --ok:#159957; --ok-soft:#e3f6ec; --ko:#e0344f; --ko-soft:#fde8ec;
+  --back:#1f2b4d; --radius:16px; --shadow:0 1px 2px rgba(29,36,51,.06),0 8px 24px rgba(29,36,51,.08);
+  --font:ui-rounded,"SF Pro Rounded","Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4em;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:.6em 1em;font-weight:600;line-height:1.1;transition:transform .08s,background .15s,border-color .15s,box-shadow .15s;white-space:nowrap}
+.btn:hover{border-color:#cfc7b8}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(47,84,235,.3)}
+.btn.primary:hover{background:#2446d4}
+.btn.ghost{background:transparent}
+.btn.sm{padding:.45em .75em;font-size:.9rem;border-radius:10px}
+.btn.danger{color:var(--ko);border-color:#f3c3cc;background:#fff}
+.icon-btn{border:none;background:transparent;width:34px;height:34px;border-radius:10px;display:inline-grid;place-items:center;color:var(--muted);font-size:1rem}
+.icon-btn:hover{background:rgba(29,36,51,.06);color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,30px);background:var(--ink);color:#fff;padding:.7em 1.1em;border-radius:12px;opacity:0;pointer-events:none;transition:.25s;z-index:100;max-width:90vw;text-align:center;font-weight:500}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ============ PROF ============ */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:14px 22px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:10}
+.brand{display:flex;align-items:center;gap:.7rem}
+.brand b{display:block;font-size:1.15rem;letter-spacing:-.01em}
+.brand small{color:var(--muted);font-size:.85rem}
+.logo{width:40px;height:40px;flex:none}
+.top-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+.layout{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:calc(100vh - 69px)}
+.sidebar{border-right:1px solid var(--line);padding:20px 16px;background:#faf7f1}
+.sidebar h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 .7rem}
+.inline-form{display:flex;gap:.4rem;margin-bottom:1rem}
+.inline-form input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:.5em .7em;background:#fff;font-size:16px}
+.inline-form input:focus,.field input:focus,.field select:focus,.card-row textarea:focus,.bulk textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.inline-form.small{margin:.3rem 0 0 0}
+.inline-form.small input{font-size:15px;padding:.4em .6em}
+.class-block{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 10px 12px;margin-bottom:12px}
+.class-row{display:flex;align-items:center;gap:.2rem}
+.class-name{flex:1;font-weight:700;padding-left:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.class-row .icon-btn{width:28px;height:28px;font-size:.85rem}
+.chap-list{list-style:none;margin:.3rem 0 0;padding:0}
+.chap{width:100%;display:flex;align-items:center;gap:.5rem;text-align:left;border:none;background:transparent;padding:.5em .6em;border-radius:9px;font-size:.95rem}
+.chap:hover{background:#f3efe7}
+.chap.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chap .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.count{font-size:.75rem;background:#efeae0;color:var(--muted);border-radius:99px;padding:.1em .55em;font-weight:600}
+.chap.active .count{background:#fff;color:var(--accent)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.dot.dirty{background:var(--accent-2)}
+.empty-side{color:var(--muted);font-size:.92rem;line-height:1.5}
+
+.main{padding:26px clamp(16px,4vw,48px) 80px;max-width:980px;width:100%}
+.crumbs{color:var(--muted);font-size:.9rem;margin-bottom:.4rem}
+.main h1{font-size:clamp(1.4rem,3vw,2rem);margin:.1rem 0 1.2rem;letter-spacing:-.02em}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:22px}
+.grid2{display:grid;grid-template-columns:1fr 2fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:.35rem}
+.field>span{font-size:.82rem;font-weight:600;color:var(--muted)}
+.field input,.field select{border:1.5px solid var(--line);border-radius:10px;padding:.6em .75em;background:#fff;font-size:16px;width:100%}
+.audio-box{display:flex;align-items:center;flex-wrap:wrap;gap:.7rem;margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
+.audio-box select{border:1.5px solid var(--line);border-radius:10px;padding:.45em .6em;background:#fff;font-size:15px}
+.switch{display:inline-flex;align-items:center;gap:.6rem;font-weight:600;cursor:pointer;user-select:none}
+.switch input{appearance:none;-webkit-appearance:none;width:44px;height:26px;border-radius:99px;background:#d9d2c4;position:relative;transition:.2s;cursor:pointer;margin:0;flex:none}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.2s}
+.switch input:checked{background:var(--accent)}
+.switch input:checked::after{left:21px}
+.muted{color:var(--muted)}
+.small{font-size:.88rem}
+
+.cards-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:0 0 12px}
+.cards-head h2{font-size:1.15rem;margin:0;display:flex;align-items:center;gap:.5rem}
+.pill{font-size:.8rem;background:var(--accent-soft);color:var(--accent);border-radius:99px;padding:.15em .6em}
+.bulk{margin-bottom:16px}
+.bulk textarea{width:100%;min-height:130px;border:1.5px solid var(--line);border-radius:12px;padding:.7em;font-size:15px;resize:vertical;background:#fff;font-family:ui-monospace,Menlo,Consolas,monospace}
+.bulk .row{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-top:.6rem;flex-wrap:wrap}
+.card-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.card-row{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;transition:box-shadow .2s}
+.card-row:focus-within{box-shadow:0 0 0 3px var(--accent-soft);border-color:#c9d3fb}
+.num{width:30px;height:30px;border-radius:9px;background:#f3efe7;display:grid;place-items:center;font-weight:700;font-size:.85rem;color:var(--muted);margin-top:22px}
+.qa{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qa label{display:flex;flex-direction:column;gap:.3rem}
+.qa label span{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.card-row textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:.55em .7em;resize:vertical;min-height:46px;font-size:16px;background:#fdfcfa;line-height:1.35}
+.row-actions{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:20px}
+.mini-audio{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:1rem;position:relative}
+.mini-audio input{position:absolute;opacity:0;pointer-events:none}
+.mini-audio .ic{opacity:.3;filter:grayscale(1);transition:.15s}
+.mini-audio input:checked + .ic{opacity:1;filter:none}
+.mini-audio:hover{background:rgba(29,36,51,.06)}
+.add-card{width:100%;margin-top:12px;padding:.9em;border-style:dashed;color:var(--accent);background:transparent}
+.add-card:hover{background:var(--accent-soft);border-color:var(--accent)}
+
+.publish{margin-top:26px;background:linear-gradient(135deg,#fff 0%,#f7f9ff 100%);border:1.5px solid #d5ddfb}
+.publish-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.publish h3{margin:0 0 .25rem;font-size:1.1rem}
+.status{font-size:.9rem;display:inline-flex;align-items:center;gap:.4rem}
+.publish-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+.share{margin-top:16px;padding-top:16px;border-top:1px dashed #d5ddfb;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}
+.link-row{display:flex;gap:.5rem}
+.link-row input{flex:1;min-width:0;border:1.5px solid #c9d3fb;border-radius:10px;padding:.6em .75em;background:#fff;font-size:15px;color:var(--accent);font-weight:600}
+.qr{width:132px;height:132px;background:#fff;border:1px solid var(--line);border-radius:12px;display:grid;place-items:center;cursor:zoom-in;padding:6px}
+.qr svg{width:100%;height:100%}
+.qr-overlay{position:fixed;inset:0;background:rgba(255,255,255,.97);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;padding:24px;cursor:zoom-out;text-align:center}
+.qr-overlay .big{width:min(78vmin,620px);aspect-ratio:1}
+.qr-overlay .big svg{width:100%;height:100%}
+.qr-overlay h2{margin:0;font-size:clamp(1.3rem,3vw,2.2rem)}
+.qr-overlay p{margin:0;color:var(--accent);font-weight:700;font-size:clamp(1rem,2.4vw,1.6rem);word-break:break-all}
+.footer-zone{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:22px;justify-content:flex-end}
+
+.welcome{max-width:640px}
+.welcome h1{font-size:clamp(1.6rem,4vw,2.4rem);margin:.2rem 0 .6rem}
+.welcome p.lead{color:var(--muted);font-size:1.05rem;line-height:1.55;margin:0 0 1.6rem}
+.steps{list-style:none;padding:0;margin:0 0 1.6rem;display:grid;gap:10px}
+.steps li{display:flex;gap:.9rem;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;line-height:1.45}
+.steps b.n{flex:none;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:.9rem}
+
+@media (max-width:820px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{border-right:none;border-bottom:1px solid var(--line)}
+  .topbar{padding:12px 14px}
+  .brand small{display:none}
+  .top-actions .btn{padding:.45em .7em;font-size:.88rem}
+}
+@media (max-width:640px){
+  .grid2{grid-template-columns:1fr}
+  .qa{grid-template-columns:1fr}
+  .card-row{grid-template-columns:1fr auto;padding:10px}
+  .num{display:none}
+  .row-actions{margin-top:18px}
+  .share{grid-template-columns:1fr}
+  .qr{margin:auto}
+}
+
+/* ============ ÉLÈVE ============ */
+body.student{overflow:hidden;overscroll-behavior:none}
+.stu{height:100vh;height:100dvh;display:flex;flex-direction:column;max-width:920px;margin:0 auto;
+  padding:calc(10px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left))}
+.stu-head{display:flex;align-items:center;gap:.6rem;min-height:48px}
+.stu-titles{flex:1;min-width:0;text-align:center}
+.stu-titles small{display:inline-block;font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--accent-soft);padding:.2em .7em;border-radius:99px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stu-titles h1{margin:.25rem 0 0;font-size:clamp(1.05rem,3.6vw,1.5rem);letter-spacing:-.01em;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.head-btn{width:44px;height:44px;border-radius:12px;border:1.5px solid var(--line);background:#fff;display:grid;place-items:center;font-size:1.25rem;flex:none}
+.head-btn:active{transform:scale(.95)}
+.head-spacer{width:44px;flex:none}
+.progress{margin:10px 0 4px}
+.bar{height:8px;background:#e7e1d6;border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#6b86ff);border-radius:99px;transition:width .35s ease}
+.pstats{display:flex;justify-content:space-between;align-items:center;font-size:.9rem;font-weight:700;margin-top:6px;color:var(--muted)}
+.pstats .sc{display:flex;gap:.5rem}
+.pstats .ok{color:var(--ok);background:var(--ok-soft);padding:.1em .55em;border-radius:99px}
+.pstats .ko{color:var(--ko);background:var(--ko-soft);padding:.1em .55em;border-radius:99px}
+.stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:12px 0;perspective:1600px}
+.flash{position:relative;width:100%;max-width:760px;height:100%;max-height:560px;cursor:pointer;-webkit-tap-highlight-color:transparent;outline:none;touch-action:manipulation}
+.flash .inner{position:absolute;inset:0;transform-style:preserve-3d;-webkit-transform-style:preserve-3d;transition:transform .55s cubic-bezier(.3,.7,.25,1)}
+.flash.flipped .inner{transform:rotateY(180deg)}
+.flash.noanim .inner{transition:none}
+.flash.enter{animation:enter .35s ease}
+@keyframes enter{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+.flash:focus-visible .face{box-shadow:0 0 0 4px var(--accent-soft),var(--shadow)}
+.face{position:absolute;inset:0;border-radius:24px;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:52px 26px 46px;text-align:center;box-shadow:0 2px 4px rgba(29,36,51,.06),0 18px 40px rgba(29,36,51,.14);overflow:hidden}
+.front{background:#fff;border:1px solid var(--line)}
+.front::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 100% 0,rgba(255,201,77,.25),transparent 40%);pointer-events:none}
+.back{background:var(--back);color:#fff;transform:rotateY(180deg)}
+.back::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 0 100%,rgba(47,84,235,.55),transparent 55%);pointer-events:none}
+.tag{position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:.75rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:.3em .8em;border-radius:99px}
+.front .tag{background:#fff5d9;color:#9a6a00}
+.back .tag{background:rgba(255,255,255,.14);color:#dfe5ff}
+.txt{position:relative;width:100%;max-height:100%;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-weight:700;line-height:1.25;letter-spacing:-.01em}
+.hint{position:absolute;bottom:16px;left:0;right:0;font-size:.85rem;color:var(--muted);font-weight:500}
+.speak{position:absolute;bottom:14px;right:14px;width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,.16);color:#fff;font-size:1.25rem;display:grid;place-items:center}
+.speak:active{transform:scale(.94)}
+.answer-bar{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-top:4px}
+.btn.big{padding:1em .8em;font-size:1.08rem;border-radius:16px;border-width:2px}
+.btn.okb{background:var(--ok);border-color:var(--ok);color:#fff;box-shadow:0 6px 16px rgba(21,153,87,.28)}
+.btn.kob{background:#fff;border-color:var(--ko);color:var(--ko)}
+.answer-bar .btn:disabled{opacity:.35;box-shadow:none}
+.end{width:100%;max-width:620px;max-height:100%;overflow:auto;text-align:center;padding:10px 4px 20px;animation:enter .4s ease}
+.ring{--p:0;width:170px;height:170px;margin:6px auto 14px;border-radius:50%;display:grid;place-items:center;
+  background:conic-gradient(var(--ring-c,var(--accent)) calc(var(--p)*1%),#e7e1d6 0)}
+.ring::before{content:"";grid-area:1/1;width:136px;height:136px;border-radius:50%;background:var(--bg)}
+.ring b{grid-area:1/1;font-size:2.4rem;letter-spacing:-.03em;position:relative}
+.end h2{margin:.2rem 0 .3rem;font-size:clamp(1.4rem,4.5vw,2rem)}
+.end .score{font-size:1.15rem;color:var(--muted);margin:0 0 1.2rem}
+.end .score b{color:var(--ink)}
+.end-actions{display:flex;flex-direction:column;gap:10px;max-width:380px;margin:0 auto 1.4rem}
+.review{text-align:left;background:#fff;border:1px solid var(--line);border-radius:16px;padding:6px 16px}
+.review summary{cursor:pointer;font-weight:700;padding:10px 0;color:var(--ko)}
+.review ul{list-style:none;margin:0;padding:0 0 8px}
+.review li{padding:10px 0;border-top:1px solid #f0ebe2;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}
+.review li b{display:block}
+.review li span{color:var(--muted)}
+.state{flex:1;display:grid;place-items:center;text-align:center;padding:20px}
+.state .box{max-width:420px}
+.state h2{margin:.6rem 0}
+.spinner{width:42px;height:42px;border:4px solid #e7e1d6;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.preview-banner{background:var(--accent-2);color:#3d2b00;text-align:center;font-weight:700;font-size:.85rem;padding:6px;border-radius:10px;margin-bottom:6px}
+@media (orientation:landscape) and (max-height:500px){
+  .stu-titles h1{font-size:1rem}.stu-titles small{display:none}
+  .progress{margin:4px 0 0}.stage{padding:6px 0}
+  .face{padding:40px 22px 34px}
+  .btn.big{padding:.6em .8em}
+}
+@media (min-width:700px) and (min-height:700px){
+  .btn.big{font-size:1.2rem;padding:1.05em}
+  .answer-bar{max-width:760px;width:100%;margin:0 auto}
+}
+@media (prefers-reduced-motion:reduce){.flash .inner{transition:none}.flash.enter,.end{animation:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ---------- Utilitaires ---------- */
+const app = document.getElementById("app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+let toastTimer;
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2600); }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function slug(s){ return String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-zA-Z0-9]+/g,"-").replace(/^-|-$/g,"").toLowerCase().slice(0,40) || "flashcards"; }
+
+const LANGS = [
+  ["en-GB","Anglais (Royaume-Uni)"],["en-US","Anglais (États-Unis)"],["es-ES","Espagnol"],["de-DE","Allemand"],
+  ["it-IT","Italien"],["fr-FR","Français"],["pt-PT","Portugais"],["nl-NL","Néerlandais"],["ru-RU","Russe"],
+  ["zh-CN","Chinois (mandarin)"],["ja-JP","Japonais"],["ar-SA","Arabe"]
+];
+
+/* ---------- Synthèse vocale ---------- */
+const canSpeak = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+if (canSpeak) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); }
+function pickVoice(lang){
+  const vs = speechSynthesis.getVoices(); const L = lang.toLowerCase();
+  const norm = v => v.lang.replace("_","-").toLowerCase();
+  return vs.find(v => norm(v)===L && v.localService) || vs.find(v => norm(v)===L) || vs.find(v => norm(v).startsWith(L.slice(0,2)));
+}
+function speak(text, lang){
+  if (!canSpeak || !text) return false;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang || "en-GB"; const v = pickVoice(u.lang); if (v) u.voice = v;
+  u.rate = .92;
+  speechSynthesis.speak(u);
+  return true;
+}
+function stopSpeak(){ if (canSpeak) speechSynthesis.cancel(); }
+
+/* ======================================================
+   INTERFACE PROF
+   ====================================================== */
+const STORE = "fcg-data-v1", SEL = "fcg-sel-v1";
+let data = loadData();
+let sel = (()=>{ try { return JSON.parse(localStorage.getItem(SEL)) || {}; } catch { return {}; } })();
+let ui = { bulk:false, qrBig:false };
+
+function loadData(){
+  try { const d = JSON.parse(localStorage.getItem(STORE)); if (d && Array.isArray(d.classes)) return d; } catch {}
+  return { classes: [] };
+}
+function save(){
+  try { localStorage.setItem(STORE, JSON.stringify(data)); localStorage.setItem(SEL, JSON.stringify(sel)); }
+  catch { toast("⚠️ Impossible d'enregistrer dans ce navigateur"); }
+}
+const findClass = id => data.classes.find(c => c.id === id);
+function current(){
+  const cls = findClass(sel.classId); if (!cls) return {};
+  const ch = cls.chapters.find(c => c.id === sel.chapterId); return { cls, ch };
+}
+const isDirty = ch => !ch.publishedAt || (ch.updatedAt || 0) > ch.publishedAt;
+function touch(ch){ ch.updatedAt = Date.now(); save(); updateStatus(); updateSideCounts(); }
+
+function newChapter(title){ return { id: uid(), title, lang:"en-GB", audio:false, cards:[{id:uid(),q:"",a:"",audio:true}], updatedAt:Date.now() }; }
+
+function renderTeacher(){
+  document.body.className = "teacher";
+  document.title = "Flashcards – Espace professeur";
+  app.innerHTML = `
+  <header class="topbar">
+    <div class="brand">${logoSVG()}<div><b>Flashcards</b><small>Espace professeur</small></div></div>
+    <div class="top-actions">
+      <button class="btn sm ghost" data-act="import">⬆︎ Importer JSON</button>
+      <button class="btn sm ghost" data-act="export-all" ${data.classes.length?"":"disabled"}>⬇︎ Exporter tout</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </div>
+  </header>
+  <div class="layout">
+    <aside class="sidebar">${sidebarHTML()}</aside>
+    <main class="main" id="main">${mainHTML()}</main>
+  </div>
+  ${ui.qrBig ? qrOverlayHTML() : ""}`;
+  autoGrowAll();
+  renderQR();
+}
+
+function logoSVG(){ return `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="14" width="40" height="30" rx="6" fill="#ffc94d" transform="rotate(-10 26 29)"/><rect x="16" y="20" width="42" height="30" rx="6" fill="#2f54eb"/><path d="M30 35h14" stroke="#fff" stroke-width="4" stroke-linecap="round"/></svg>`; }
+
+function sidebarHTML(){
+  const blocks = data.classes.map(c => `
+    <section class="class-block">
+      <div class="class-row">
+        <span class="class-name" title="${esc(c.name)}">🎓 ${esc(c.name)}</span>
+        <button class="icon-btn" data-act="rename-class" data-id="${c.id}" title="Renommer la classe">✎</button>
+        <button class="icon-btn" data-act="del-class" data-id="${c.id}" title="Supprimer la classe">🗑</button>
+      </div>
+      <ul class="chap-list">
+        ${c.chapters.map(ch => `<li><button class="chap ${ch.id===sel.chapterId?"active":""}" data-act="open-chap" data-class="${c.id}" data-id="${ch.id}">
+          ${ch.share ? `<span class="dot ${isDirty(ch)?"dirty":""}" title="${isDirty(ch)?"Modifié depuis la publication":"Publié"}"></span>` : ""}
+          <span class="t">${esc(ch.title || "Sans titre")}</span><span class="count" data-count="${ch.id}">${ch.cards.length}</span></button></li>`).join("")}
+      </ul>
+      <form class="inline-form small" data-form="new-chap" data-class="${c.id}">
+        <input name="title" placeholder="+ Nouveau chapitre" maxlength="150" required aria-label="Titre du nouveau chapitre">
+        <button class="btn sm" aria-label="Créer le chapitre">Créer</button>
+      </form>
+    </section>`).join("");
+  return `
+    <h2>Mes classes</h2>
+    <form class="inline-form" data-form="new-class">
+      <input name="name" placeholder="Nouvelle classe (ex : 4e B)" maxlength="100" required aria-label="Nom de la nouvelle classe">
+      <button class="btn sm primary">Ajouter</button>
+    </form>
+    ${blocks || `<p class="empty-side">Commence par créer une classe (un niveau), puis ajoute-lui un chapitre.</p>`}`;
+}
+
+function mainHTML(){
+  const { cls, ch } = current();
+  if (!ch) return welcomeHTML();
+  const langOpts = LANGS.map(([v,l]) => `<option value="${v}" ${v===ch.lang?"selected":""}>${l}</option>`).join("");
+  const classOpts = data.classes.map(c => `<option value="${c.id}" ${c.id===cls.id?"selected":""}>${esc(c.name)}</option>`).join("");
+  return `
+    <div class="crumbs">${esc(cls.name)} › Chapitre</div>
+    <h1 id="chapTitle">${esc(ch.title || "Sans titre")}</h1>
+    <section class="panel">
+      <div class="grid2">
+        <label class="field"><span>Classe (niveau)</span><select data-field="classId">${classOpts}</select></label>
+        <label class="field"><span>Titre du chapitre</span><input data-field="title" value="${esc(ch.title)}" maxlength="150" placeholder="Ex : Unit 3 – Food and drinks"></label>
+      </div>
+      <div class="audio-box">
+        <label class="switch"><input type="checkbox" data-field="audio" ${ch.audio?"checked":""}> 🔊 Lire les réponses à voix haute</label>
+        ${ch.audio ? `<select data-field="lang" aria-label="Langue de prononciation">${langOpts}</select>
+          <button class="btn sm" data-act="test-voice">▶ Tester la voix</button>
+          <span class="muted small" style="flex-basis:100%">La réponse est prononcée quand l'élève retourne la carte. Décoche 🔊 sur une carte pour ne pas la lire.</span>`
+          : `<span class="muted small">Pratique pour la prononciation en langues vivantes.</span>`}
+        ${!canSpeak ? `<span class="small" style="color:var(--ko)">Ce navigateur ne gère pas la synthèse vocale.</span>`:""}
+      </div>
+    </section>
+
+    <div class="cards-head">
+      <h2>Flashcards <span class="pill" id="cardCount">${ch.cards.length}</span></h2>
+      <button class="btn sm" data-act="toggle-bulk">${ui.bulk ? "Fermer l'ajout rapide" : "⚡ Ajout rapide"}</button>
+    </div>
+    ${ui.bulk ? `<section class="panel bulk">
+      <label class="field"><span>Colle une carte par ligne : question ; réponse (ou séparées par une tabulation, ex. depuis un tableur)</span>
+      <textarea id="bulkText" placeholder="chien ; dog&#10;chat ; cat&#10;oiseau ; bird"></textarea></label>
+      <div class="row"><span class="muted small" id="bulkInfo"></span><button class="btn primary sm" data-act="bulk-add">Ajouter ces cartes</button></div>
+    </section>` : ""}
+    <ol class="card-list" id="cardList">${ch.cards.map((c,i) => cardRowHTML(c,i,ch)).join("")}</ol>
+    <button class="btn add-card" data-act="add-card">+ Ajouter une flashcard</button>
+
+    <section class="panel publish">
+      <div class="publish-row">
+        <div>
+          <h3>Partager aux élèves</h3>
+          <span class="status" id="pubStatus">${statusHTML(ch)}</span>
+        </div>
+        <div class="publish-actions">
+          <button class="btn" data-act="preview">👁 Aperçu élève</button>
+          <button class="btn primary" data-act="publish" id="pubBtn">${ch.share ? "✓ Valider les modifications" : "✓ Valider et obtenir le lien"}</button>
+        </div>
+      </div>
+      ${ch.share ? shareHTML(ch) : ""}
+    </section>
+
+    <div class="footer-zone">
+      <button class="btn sm ghost" data-act="dup-chap">⧉ Dupliquer</button>
+      <button class="btn sm ghost" data-act="export-chap">⬇︎ Exporter ce chapitre</button>
+      <button class="btn sm danger" data-act="del-chap">🗑 Supprimer le chapitre</button>
+    </div>`;
+}
+
+function cardRowHTML(c, i, ch){
+  return `<li class="card-row" data-card="${c.id}">
+    <div class="num">${i+1}</div>
+    <div class="qa">
+      <label><span>Question</span><textarea data-cfield="q" rows="1" maxlength="2000" placeholder="Recto">${esc(c.q)}</textarea></label>
+      <label><span>Réponse</span><textarea data-cfield="a" rows="1" maxlength="2000" placeholder="Verso">${esc(c.a)}</textarea></label>
+    </div>
+    <div class="row-actions">
+      ${ch.audio ? `<label class="mini-audio" title="Prononcer cette réponse"><input type="checkbox" data-cfield="audio" ${c.audio!==false?"checked":""}><span class="ic">🔊</span></label>` : ""}
+      <button class="icon-btn" data-act="del-card" title="Supprimer la carte">✕</button>
+    </div>
+  </li>`;
+}
+
+function statusHTML(ch){
+  if (!ch.share) return `<span class="muted">Pas encore publié</span>`;
+  if (isDirty(ch)) return `<span class="dot dirty"></span> Modifications non publiées — clique sur « Valider » pour mettre à jour le lien`;
+  return `<span class="dot"></span> Publié le ${new Date(ch.publishedAt).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"})} — le lien est à jour`;
+}
+const shareURL = ch => `${location.origin}/s/${ch.share.id}`;
+function shareHTML(ch){
+  const url = shareURL(ch);
+  return `<div class="share">
+    <div>
+      <div class="link-row">
+        <input readonly value="${esc(url)}" id="shareLink" aria-label="Lien élève">
+        <button class="btn sm primary" data-act="copy-link">Copier</button>
+      </div>
+      <div style="display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap">
+        <a class="btn sm" href="${esc(url)}" target="_blank" rel="noopener">↗ Ouvrir</a>
+        <button class="btn sm" data-act="qr-big">⛶ QR code plein écran</button>
+        ${navigator.share ? `<button class="btn sm" data-act="native-share">Partager…</button>` : ""}
+      </div>
+      <p class="muted small" style="margin:.7rem 0 0">Le lien reste le même : après une modification, clique simplement sur « Valider ».</p>
+    </div>
+    <div class="qr" id="qrBox" data-act="qr-big" title="Agrandir le QR code"></div>
+  </div>`;
+}
+function qrOverlayHTML(){
+  const { cls, ch } = current(); if (!ch || !ch.share) return "";
+  return `<div class="qr-overlay" data-act="qr-close"><h2>${esc(cls.name)} — ${esc(ch.title)}</h2><div class="big" id="qrBig"></div><p>${esc(shareURL(ch))}</p><span class="muted small">Touchez pour fermer</span></div>`;
+}
+
+function welcomeHTML(){
+  const hasClass = data.classes.length > 0;
+  return `<div class="welcome">
+    <h1>Crée des flashcards pour tes élèves</h1>
+    <p class="lead">Les élèves révisent sur téléphone ou tablette : cartes tirées au hasard, on touche pour retourner, et un score à la fin.</p>
+    <ol class="steps">
+      <li><b class="n">1</b><div><b>Crée une classe</b> (un niveau, ex : « 5e » ou « 4e B ») dans la colonne de gauche.</div></li>
+      <li><b class="n">2</b><div><b>Ajoute un chapitre</b> à cette classe, puis écris tes cartes : question au recto, réponse au verso. Active 🔊 pour faire prononcer les réponses.</div></li>
+      <li><b class="n">3</b><div><b>Valide</b> pour obtenir un lien (et un QR code) à partager aux élèves.</div></li>
+    </ol>
+    ${hasClass ? `<p class="muted">👈 Choisis un chapitre ou crée-en un nouveau.</p>` : `<button class="btn primary" data-act="demo">Essayer avec un exemple</button>`}
+    <p class="muted small" style="margin-top:1.4rem">Tes classes sont enregistrées dans ce navigateur. Pense à « Exporter tout » de temps en temps pour garder une sauvegarde.</p>
+  </div>`;
+}
+
+function updateStatus(){
+  const { ch } = current(); if (!ch) return;
+  const s = document.getElementById("pubStatus"); if (s) s.innerHTML = statusHTML(ch);
+}
+function updateSideCounts(){
+  const { cls, ch } = current(); if (!ch) return;
+  const el = document.querySelector(`[data-count="${ch.id}"]`); if (el) el.textContent = ch.cards.length;
+  const cc = document.getElementById("cardCount"); if (cc) cc.textContent = ch.cards.length;
+  const dot = el && el.parentElement.querySelector(".dot");
+  if (dot) dot.classList.toggle("dirty", isDirty(ch));
+}
+function autoGrow(t){ t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight + 3, 320) + "px"; }
+function autoGrowAll(){ document.querySelectorAll(".card-row textarea").forEach(autoGrow); }
+function rerenderMain(){ const m = document.getElementById("main"); if (m){ m.innerHTML = mainHTML(); autoGrowAll(); renderQR(); } }
+function rerenderAll(){ const y = window.scrollY; renderTeacher(); window.scrollTo(0, y); }
+
+/* QR code (bibliothèque chargée à la demande) */
+let qrLib = null;
+function loadQRLib(){
+  if (qrLib) return qrLib;
+  qrLib = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "/qrcode.js";
+    s.onload = () => res(window.qrcode); s.onerror = () => { qrLib = null; rej(); };
+    document.head.appendChild(s);
+  });
+  return qrLib;
+}
+async function renderQR(){
+  const { ch } = current(); if (!ch || !ch.share) return;
+  const targets = [document.getElementById("qrBox"), document.getElementById("qrBig")].filter(Boolean);
+  if (!targets.length) return;
+  try {
+    const qrcode = await loadQRLib();
+    const qr = qrcode(0, "M"); qr.addData(shareURL(ch)); qr.make();
+    const svg = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+    targets.forEach(t => t.innerHTML = svg);
+  } catch { targets.forEach(t => t.innerHTML = `<span class="muted small">QR indisponible</span>`); }
+}
+
+/* Actions prof */
+function chapterPayload(cls, ch){
+  return { classe: cls.name, chapitre: ch.title, lang: ch.lang, audio: !!ch.audio,
+    cards: ch.cards.filter(c => c.q.trim() && c.a.trim()).map(c => ({ q:c.q.trim(), a:c.a.trim(), audio: c.audio!==false })) };
+}
+
+async function publish(){
+  const { cls, ch } = current(); if (!ch) return;
+  if (!ch.title.trim()) { toast("Donne un titre au chapitre"); document.querySelector('[data-field="title"]')?.focus(); return; }
+  const payload = chapterPayload(cls, ch);
+  if (!payload.cards.length) { toast("Ajoute au moins une carte complète (question + réponse)"); return; }
+  const incomplete = ch.cards.filter(c => (c.q.trim() || c.a.trim()) && !(c.q.trim() && c.a.trim())).length;
+  const btn = document.getElementById("pubBtn"); if (btn) { btn.disabled = true; btn.textContent = "Publication…"; }
+  try {
+    let res;
+    const body = JSON.stringify(payload);
+    if (ch.share) {
+      res = await fetch(`/api/decks/${ch.share.id}`, { method:"PUT", headers:{ "content-type":"application/json", "x-edit-key": ch.share.key }, body });
+      if (res.status === 404 || res.status === 403) res = null; // lien perdu : on en recrée un
+    }
+    if (!res) res = await fetch("/api/decks", { method:"POST", headers:{ "content-type":"application/json" }, body });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.error || "Erreur " + res.status);
+    const isNew = !ch.share || ch.share.id !== out.id;
+    ch.share = { id: out.id, key: out.key }; ch.publishedAt = Date.now(); if ((ch.updatedAt||0) > ch.publishedAt) ch.updatedAt = ch.publishedAt;
+    save(); rerenderAll();
+    toast(isNew ? "✅ Lien créé !" : "✅ Lien mis à jour") ;
+    if (incomplete) setTimeout(() => toast(`${incomplete} carte(s) incomplète(s) ignorée(s)`), 2700);
+    if (isNew) document.getElementById("shareLink")?.scrollIntoView({ behavior:"smooth", block:"center" });
+  } catch (e) {
+    toast("❌ Publication impossible : " + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = ch.share ? "✓ Valider les modifications" : "✓ Valider et obtenir le lien"; }
+  }
+}
+
+function download(obj, name){
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type:"application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+const exportWrap = classes => ({ app:"flashcardsGenerator", version:1, exportedAt:new Date().toISOString(), classes });
+
+function normCard(c){ return { id: uid(), q: String(c?.q ?? c?.question ?? "").slice(0,2000), a: String(c?.a ?? c?.answer ?? c?.reponse ?? "").slice(0,2000), audio: c?.audio !== false }; }
+function normChapter(ch){
+  const share = ch?.share && /^[A-Za-z0-9]{6,16}$/.test(ch.share.id||"") && typeof ch.share.key==="string" ? { id: ch.share.id, key: ch.share.key } : undefined;
+  return { id: typeof ch?.id==="string" ? ch.id : uid(), title: String(ch?.title ?? ch?.chapitre ?? "Sans titre").slice(0,150),
+    lang: LANGS.some(l=>l[0]===ch?.lang) ? ch.lang : "en-GB", audio: !!ch?.audio,
+    cards: (Array.isArray(ch?.cards) ? ch.cards : []).slice(0,500).map(normCard),
+    share, publishedAt: share ? (Number(ch.publishedAt)||Date.now()) : undefined, updatedAt: Number(ch?.updatedAt)||Date.now() };
+}
+function importData(obj){
+  let incoming = [];
+  if (obj && Array.isArray(obj.classes)) incoming = obj.classes.map(c => ({ name: String(c?.name ?? "Classe").slice(0,100), chapters: (Array.isArray(c?.chapters)?c.chapters:[]).map(normChapter) }));
+  else if (obj && Array.isArray(obj.cards)) incoming = [{ name: String(obj.classe || "Classe importée").slice(0,100), chapters: [normChapter(obj)] }];
+  else throw new Error("format non reconnu");
+  let nCh = 0, nCards = 0, firstSel = null;
+  const allIds = new Set(data.classes.flatMap(c => c.chapters.map(ch => ch.id)));
+  for (const inc of incoming) {
+    let cls = data.classes.find(c => c.name.trim().toLowerCase() === inc.name.trim().toLowerCase());
+    if (!cls) { cls = { id: uid(), name: inc.name, chapters: [] }; data.classes.push(cls); }
+    for (const ch of inc.chapters) {
+      const idx = cls.chapters.findIndex(x => x.id === ch.id);
+      if (idx >= 0) cls.chapters[idx] = ch;
+      else { if (allIds.has(ch.id)) ch.id = uid(); cls.chapters.push(ch); }
+      allIds.add(ch.id); nCh++; nCards += ch.cards.length;
+      if (!firstSel) firstSel = { classId: cls.id, chapterId: ch.id };
+    }
+  }
+  if (firstSel) sel = firstSel;
+  save(); rerenderAll();
+  toast(`✅ Import : ${nCh} chapitre(s), ${nCards} carte(s)`);
+}
+
+function addCardsFromBulk(text){
+  const { ch } = current(); if (!ch) return 0;
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let n = 0;
+  // retire la carte vide initiale éventuelle
+  if (ch.cards.length === 1 && !ch.cards[0].q.trim() && !ch.cards[0].a.trim()) ch.cards = [];
+  for (const l of lines) {
+    let parts = l.includes("\t") ? l.split("\t") : l.split(";");
+    if (parts.length < 2) continue;
+    const q = parts.shift().trim(), a = parts.join(l.includes("\t") ? " " : ";").trim();
+    if (q && a) { ch.cards.push({ id: uid(), q, a, audio: true }); n++; }
+  }
+  return n;
+}
+
+function demo(){
+  const cls = { id: uid(), name: "5e", chapters: [] };
+  const ch = newChapter("Unit 2 – Animals");
+  ch.audio = true; ch.lang = "en-GB";
+  ch.cards = [["un chien","a dog"],["un chat","a cat"],["un oiseau","a bird"],["un cheval","a horse"],["une souris","a mouse"],["un lapin","a rabbit"]]
+    .map(([q,a]) => ({ id: uid(), q, a, audio: true }));
+  cls.chapters.push(ch); data.classes.push(cls);
+  sel = { classId: cls.id, chapterId: ch.id }; save(); rerenderAll();
+}
+
+/* Délégation d'évènements (prof) */
+function onTeacherClick(e){
+  const el = e.target.closest("[data-act]"); if (!el || document.body.className !== "teacher") return;
+  const act = el.dataset.act; const { cls, ch } = current();
+  switch (act) {
+    case "open-chap": sel = { classId: el.dataset.class, chapterId: el.dataset.id }; ui.bulk = false; save(); rerenderAll(); if (innerWidth < 820) document.getElementById("main")?.scrollIntoView({behavior:"smooth"}); break;
+    case "rename-class": { const c = findClass(el.dataset.id); const n = prompt("Nouveau nom de la classe :", c.name); if (n && n.trim()) { c.name = n.trim().slice(0,100); c.chapters.forEach(x => x.updatedAt = Date.now()); save(); rerenderAll(); } break; }
+    case "del-class": { const c = findClass(el.dataset.id); if (confirm(`Supprimer la classe « ${c.name} » et ses ${c.chapters.length} chapitre(s) ?\n\nLes liens déjà partagés continueront de fonctionner.`)) { data.classes = data.classes.filter(x => x !== c); if (sel.classId === c.id) sel = {}; save(); rerenderAll(); } break; }
+    case "del-chap": if (confirm(`Supprimer le chapitre « ${ch.title} » ?`)) { cls.chapters = cls.chapters.filter(x => x !== ch); sel = { classId: cls.id }; save(); rerenderAll(); } break;
+    case "dup-chap": { const copy = JSON.parse(JSON.stringify(ch)); copy.id = uid(); copy.title = ch.title + " (copie)"; delete copy.share; delete copy.publishedAt; copy.cards.forEach(c => c.id = uid()); copy.updatedAt = Date.now(); cls.chapters.push(copy); sel = { classId: cls.id, chapterId: copy.id }; save(); rerenderAll(); toast("Chapitre dupliqué"); break; }
+    case "add-card": { ch.cards.push({ id: uid(), q:"", a:"", audio:true }); touch(ch); const list = document.getElementById("cardList"); list.insertAdjacentHTML("beforeend", cardRowHTML(ch.cards.at(-1), ch.cards.length-1, ch)); const t = list.lastElementChild.querySelector("textarea"); t.focus(); t.scrollIntoView({block:"center",behavior:"smooth"}); break; }
+    case "del-card": { const id = el.closest("[data-card]").dataset.card; const card = ch.cards.find(c => c.id === id); if ((card.q || card.a) && !confirm("Supprimer cette carte ?")) break; ch.cards = ch.cards.filter(c => c.id !== id); touch(ch); rerenderMain(); break; }
+    case "toggle-bulk": ui.bulk = !ui.bulk; rerenderMain(); if (ui.bulk) document.getElementById("bulkText")?.focus(); break;
+    case "bulk-add": { const n = addCardsFromBulk(document.getElementById("bulkText").value); if (!n) { toast("Aucune ligne reconnue (format : question ; réponse)"); break; } touch(ch); ui.bulk = false; rerenderMain(); toast(`${n} carte(s) ajoutée(s)`); break; }
+    case "test-voice": { const c = ch.cards.find(c => c.a.trim()); const sample = c ? c.a : (LANGS.find(l=>l[0]===ch.lang)?.[0].startsWith("en") ? "Hello, how are you?" : "1, 2, 3"); if (!speak(sample, ch.lang)) toast("Synthèse vocale indisponible"); break; }
+    case "publish": publish(); break;
+    case "preview": { const p = chapterPayload(cls, ch); if (!p.cards.length) { toast("Ajoute au moins une carte complète"); break; } startStudent(p, { preview: true }); break; }
+    case "copy-link": { const inp = document.getElementById("shareLink"); (navigator.clipboard ? navigator.clipboard.writeText(inp.value) : Promise.reject()).then(() => toast("📋 Lien copié"), () => { inp.select(); document.execCommand("copy"); toast("📋 Lien copié"); }); break; }
+    case "native-share": navigator.share({ title: `${cls.name} – ${ch.title}`, url: shareURL(ch) }).catch(()=>{}); break;
+    case "qr-big": ui.qrBig = true; document.body.insertAdjacentHTML("beforeend", qrOverlayHTML()); renderQR(); break;
+    case "qr-close": ui.qrBig = false; el.remove(); break;
+    case "export-all": download(exportWrap(data.classes), `flashcards-sauvegarde-${new Date().toISOString().slice(0,10)}.json`); break;
+    case "export-chap": download(exportWrap([{ id: cls.id, name: cls.name, chapters: [ch] }]), `flashcards-${slug(cls.name)}-${slug(ch.title)}.json`); break;
+    case "import": document.getElementById("importFile").click(); break;
+    case "demo": demo(); break;
+  }
+}
+function onTeacherSubmit(e){
+  const f = e.target.closest("form[data-form]"); if (!f) return; e.preventDefault();
+  if (f.dataset.form === "new-class") {
+    const name = f.name.value.trim(); if (!name) return;
+    const cls = { id: uid(), name: name.slice(0,100), chapters: [] }; data.classes.push(cls);
+    sel = { classId: cls.id }; save(); rerenderAll();
+    document.querySelector(`form[data-class="${cls.id}"] input`)?.focus();
+  } else if (f.dataset.form === "new-chap") {
+    const title = f.title.value.trim(); const cls = findClass(f.dataset.class); if (!title || !cls) return;
+    const ch = newChapter(title.slice(0,150)); cls.chapters.push(ch);
+    sel = { classId: cls.id, chapterId: ch.id }; ui.bulk = false; save(); rerenderAll();
+    document.querySelector('.card-row textarea')?.focus();
+  }
+}
+function onTeacherInput(e){
+  const t = e.target; const { cls, ch } = current();
+  if (t.id === "bulkText") { const n = t.value.split(/\r?\n/).filter(l => /[;\t]/.test(l)).length; document.getElementById("bulkInfo").textContent = n ? `${n} carte(s) détectée(s)` : ""; return; }
+  if (!ch) return;
+  if (t.dataset.field === "title") { ch.title = t.value; document.getElementById("chapTitle").textContent = t.value || "Sans titre"; const s = document.querySelector(`.chap.active .t`); if (s) s.textContent = t.value || "Sans titre"; touch(ch); }
+  else if (t.dataset.cfield === "q" || t.dataset.cfield === "a") { const card = ch.cards.find(c => c.id === t.closest("[data-card]").dataset.card); card[t.dataset.cfield] = t.value; autoGrow(t); touch(ch); }
+}
+function onTeacherChange(e){
+  const t = e.target; const { cls, ch } = current();
+  if (t.id === "importFile") {
+    const file = t.files[0]; if (!file) return;
+    file.text().then(txt => importData(JSON.parse(txt))).catch(err => toast("❌ Fichier JSON invalide : " + err.message));
+    t.value = ""; return;
+  }
+  if (!ch) return;
+  if (t.dataset.field === "audio") { ch.audio = t.checked; touch(ch); rerenderMain(); }
+  else if (t.dataset.field === "lang") { ch.lang = t.value; touch(ch); }
+  else if (t.dataset.field === "classId") { const to = findClass(t.value); cls.chapters = cls.chapters.filter(x => x !== ch); to.chapters.push(ch); sel.classId = to.id; touch(ch); rerenderAll(); }
+  else if (t.dataset.cfield === "audio") { const card = ch.cards.find(c => c.id === t.closest("[data-card]").dataset.card); card.audio = t.checked; touch(ch); }
+}
+function onKey(e){
+  if (document.body.className === "teacher") {
+    if (e.key === "Escape" && ui.qrBig) { ui.qrBig = false; document.querySelector(".qr-overlay")?.remove(); }
+    // Ctrl/Cmd + Entrée dans une réponse : nouvelle carte
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && e.target.dataset?.cfield) { e.preventDefault(); document.querySelector('[data-act="add-card"]')?.click(); }
+    return;
+  }
+  if (document.body.className === "student") studentKey(e);
+}
+
+/* ======================================================
+   INTERFACE ÉLÈVE
+   ====================================================== */
+let S = null;
+
+function startStudent(deck, opts = {}){
+  stopSpeak();
+  document.body.className = "student";
+  document.title = `${deck.classe ? deck.classe + " – " : ""}${deck.chapitre}`;
+  S = { deck, opts, order: [], i: 0, flipped: false, ok: [], ko: [], busy: false };
+  app.innerHTML = `
+  <div class="stu">
+    ${opts.preview ? `<div class="preview-banner">Aperçu — c'est ce que verront les élèves</div>` : ""}
+    <header class="stu-head">
+      ${opts.preview ? `<button class="head-btn" data-sact="back" title="Retour à l'édition" aria-label="Retour à l'édition">←</button>` : `<span class="head-spacer"></span>`}
+      <div class="stu-titles">${deck.classe ? `<small>${esc(deck.classe)}</small>` : ""}<h1>${esc(deck.chapitre)}</h1></div>
+      <button class="head-btn" data-sact="restart" title="Recommencer" aria-label="Recommencer">↻</button>
+    </header>
+    <div class="progress" id="progress">
+      <div class="bar"><i id="bar"></i></div>
+      <div class="pstats"><span id="pos"></span><span class="sc"><span class="ok" id="okc">✓ 0</span><span class="ko" id="koc">✗ 0</span></span></div>
+    </div>
+    <div class="stage" id="stage"></div>
+    <footer class="answer-bar" id="abar"></footer>
+  </div>`;
+  startRound(deck.cards.map((_, i) => i));
+}
+
+function startRound(indices){
+  stopSpeak();
+  S.order = shuffle(indices); S.i = 0; S.ok = []; S.ko = []; S.flipped = false;
+  document.getElementById("progress").style.display = "";
+  document.getElementById("stage").innerHTML = `
+    <div class="flash" id="flash" role="button" tabindex="0" aria-label="Carte : touchez pour voir la réponse" data-sact="flip">
+      <div class="inner">
+        <div class="face front"><span class="tag">Question</span><div class="txt" id="qtxt"></div><span class="hint">Touchez la carte pour la retourner</span></div>
+        <div class="face back"><span class="tag">Réponse</span><div class="txt" id="atxt"></div>
+          ${S.deck.audio && canSpeak ? `<button class="speak" data-sact="speak" aria-label="Réécouter" title="Réécouter">🔊</button>` : ""}</div>
+      </div>
+    </div>`;
+  document.getElementById("abar").innerHTML = `
+    <button class="btn big kob" data-sact="ko" disabled>✗ À revoir</button>
+    <button class="btn big okb" data-sact="ok" disabled>✓ Je savais</button>`;
+  document.getElementById("abar").style.display = "";
+  showCard(false);
+}
+
+function fit(el){
+  const len = el.textContent.length;
+  const vw = Math.min(innerWidth, 760);
+  let size = len < 18 ? 2.6 : len < 40 ? 2.1 : len < 90 ? 1.65 : len < 200 ? 1.3 : 1.08;
+  if (vw < 420) size *= .85;
+  el.style.fontSize = size + "rem";
+  let guard = 0;
+  while (el.scrollHeight > el.clientHeight + 2 && size > .9 && guard++ < 20) { size -= .08; el.style.fontSize = size + "rem"; }
+}
+
+function currentCard(){ return S.deck.cards[S.order[S.i]]; }
+
+function showCard(animate = true){
+  const total = S.order.length;
+  if (S.i >= total) return showEnd();
+  const flash = document.getElementById("flash");
+  const card = currentCard();
+  flash.classList.add("noanim"); flash.classList.remove("flipped", "enter");
+  document.getElementById("qtxt").textContent = card.q;
+  document.getElementById("atxt").textContent = card.a;
+  void flash.offsetWidth; flash.classList.remove("noanim");
+  if (animate) flash.classList.add("enter");
+  S.flipped = false;
+  fit(document.getElementById("qtxt")); fit(document.getElementById("atxt"));
+  document.getElementById("pos").textContent = `Carte ${S.i + 1} / ${total}`;
+  document.getElementById("bar").style.width = (S.i / total * 100) + "%";
+  document.getElementById("okc").textContent = "✓ " + S.ok.length;
+  document.getElementById("koc").textContent = "✗ " + S.ko.length;
+  document.querySelectorAll("#abar .btn").forEach(b => b.disabled = true);
+  flash.setAttribute("aria-label", "Question : " + card.q + ". Touchez pour voir la réponse.");
+}
+
+function flip(){
+  if (S.i >= S.order.length) return;
+  const flash = document.getElementById("flash");
+  S.flipped = !S.flipped;
+  flash.classList.remove("enter");
+  flash.classList.toggle("flipped", S.flipped);
+  const card = currentCard();
+  if (S.flipped) {
+    document.querySelectorAll("#abar .btn").forEach(b => b.disabled = false);
+    flash.setAttribute("aria-label", "Réponse : " + card.a);
+    if (S.deck.audio && card.audio !== false) speak(card.a, S.deck.lang);
+  } else stopSpeak();
+}
+
+function answer(known){
+  if (!S.flipped || S.busy) return;
+  S.busy = true;
+  stopSpeak();
+  (known ? S.ok : S.ko).push(S.order[S.i]);
+  S.i++;
+  if (navigator.vibrate && !known) try { navigator.vibrate(25); } catch {}
+  setTimeout(() => { S.busy = false; showCard(); }, 60);
+}
+
+function showEnd(){
+  stopSpeak();
+  const total = S.order.length, ok = S.ok.length, pct = Math.round(ok / total * 100);
+  document.getElementById("bar").style.width = "100%";
+  document.getElementById("progress").style.display = "none";
+  document.getElementById("abar").style.display = "none";
+  const msg = pct === 100 ? "Parfait ! 🏆" : pct >= 80 ? "Excellent ! 🎉" : pct >= 60 ? "Bien joué ! 👍" : pct >= 40 ? "Continue tes efforts 💪" : "Il faut encore réviser 📚";
+  const color = pct >= 80 ? "var(--ok)" : pct >= 50 ? "var(--accent)" : "var(--ko)";
+  const review = S.ko.map(i => S.deck.cards[i]);
+  document.getElementById("stage").innerHTML = `
+    <div class="end" role="region" aria-label="Score final">
+      <div class="ring" style="--p:${pct};--ring-c:${color}"><b>${pct}%</b></div>
+      <h2>${msg}</h2>
+      <p class="score">Score final : <b>${ok} / ${total}</b> carte${total>1?"s":""} sue${ok>1?"s":""}</p>
+      <div class="end-actions">
+        ${review.length ? `<button class="btn big primary" data-sact="retry">↻ Revoir mes ${review.length} erreur${review.length>1?"s":""}</button>` : ""}
+        <button class="btn big ${review.length ? "" : "primary"}" data-sact="restart-all">↻ Recommencer ${review.length ? "toutes les cartes" : ""}</button>
+        ${S.opts.preview ? `<button class="btn big ghost" data-sact="back">← Retour à l'édition</button>` : ""}
+      </div>
+      ${review.length ? `<details class="review" ${review.length <= 5 ? "open" : ""}><summary>Cartes à revoir (${review.length})</summary>
+        <ul>${review.map(c => `<li><b>${esc(c.q)}</b><span>${esc(c.a)}</span></li>`).join("")}</ul></details>` : ""}
+    </div>`;
+}
+
+function onStudentClick(e){
+  if (document.body.className !== "student") return;
+  const el = e.target.closest("[data-sact]"); if (!el) return;
+  const act = el.dataset.sact;
+  if (act === "speak") { e.stopPropagation(); speak(currentCard().a, S.deck.lang); return; }
+  if (act === "flip") return flip();
+  if (act === "ok") return answer(true);
+  if (act === "ko") return answer(false);
+  if (act === "retry") return startRound(S.ko.slice());
+  if (act === "restart-all") return startRound(S.deck.cards.map((_, i) => i));
+  if (act === "restart") { if (S.i === 0 || S.i >= S.order.length || confirm("Recommencer depuis le début ?")) startRound(S.deck.cards.map((_, i) => i)); return; }
+  if (act === "back") { stopSpeak(); S = null; renderTeacher(); }
+}
+function studentKey(e){
+  if (!S || e.target.closest("button:not(#flash)") && (e.key === " " || e.key === "Enter")) return;
+  if (S.i >= S.order.length) return;
+  if (e.key === " " || e.key === "Enter") { e.preventDefault(); flip(); }
+  else if (S.flipped && (e.key === "ArrowRight" || e.key === "1")) answer(true);
+  else if (S.flipped && (e.key === "ArrowLeft" || e.key === "2")) answer(false);
+}
+
+/* Glisser à droite / gauche une fois la carte retournée */
+let touchStart = null;
+document.addEventListener("touchstart", e => { if (S && e.target.closest("#flash")) touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
+document.addEventListener("touchend", e => {
+  if (!touchStart || !S) return;
+  const dx = e.changedTouches[0].clientX - touchStart.x, dy = e.changedTouches[0].clientY - touchStart.y; touchStart = null;
+  if (S.flipped && Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) { e.preventDefault(); answer(dx > 0); }
+});
+
+let resizeT; addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (S && document.getElementById("qtxt")) { fit(document.getElementById("qtxt")); fit(document.getElementById("atxt")); } }, 150); });
+
+async function loadRemote(id){
+  document.body.className = "student";
+  app.innerHTML = `<div class="stu"><div class="state"><div class="box"><div class="spinner"></div><p class="muted">Chargement des flashcards…</p></div></div></div>`;
+  try {
+    const res = await fetch(`/api/decks/${encodeURIComponent(id)}`);
+    if (res.status === 404) throw Object.assign(new Error("introuvable"), { notFound: true });
+    if (!res.ok) throw new Error("Erreur " + res.status);
+    const deck = await res.json();
+    if (!deck.cards || !deck.cards.length) throw Object.assign(new Error("vide"), { notFound: true });
+    startStudent(deck);
+  } catch (e) {
+    app.innerHTML = `<div class="stu"><div class="state"><div class="box">
+      <div style="font-size:3rem">${e.notFound ? "🔍" : "📡"}</div>
+      <h2>${e.notFound ? "Ce paquet de flashcards est introuvable" : "Connexion impossible"}</h2>
+      <p class="muted">${e.notFound ? "Vérifie le lien donné par ton professeur." : "Vérifie ta connexion Internet puis réessaie."}</p>
+      ${e.notFound ? "" : `<button class="btn primary" onclick="location.reload()">Réessayer</button>`}
+    </div></div></div>`;
+  }
+}
+
+/* ---------- Démarrage ---------- */
+app.addEventListener("click", e => { onTeacherClick(e); onStudentClick(e); });
+document.body.addEventListener("click", e => { if (e.target.closest(".qr-overlay")) onTeacherClick(e); });
+app.addEventListener("submit", onTeacherSubmit);
+app.addEventListener("input", onTeacherInput);
+app.addEventListener("change", onTeacherChange);
+document.addEventListener("keydown", onKey);
+
+const route = location.pathname.match(/^\/s\/([A-Za-z0-9]+)\/?$/);
+if (route) loadRemote(route[1]);
+else {
+  if (!current().ch && data.classes[0]?.chapters[0]) sel = { classId: data.classes[0].id, chapterId: data.classes[0].chapters[0].id };
+  renderTeacher();
+}
+</script>
+</body>
+</html>

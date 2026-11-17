@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "flashcards",
+  "main": "src/index.js",
+  "compatibility_date": "2025-09-01",
+  "rules": [{ "type": "Text", "globs": ["**/*.html", "**/*.txt"], "fallthrough": false }],
+  "kv_namespaces": [{ "binding": "DECKS", "id": "0d7781c280bb4fe089373c529574fa4e" }],
+  "routes": [{ "pattern": "flashcards.outilotheque.fr", "custom_domain": true }],
+  "observability": { "enabled": true }
+}
