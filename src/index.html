@@ -179,7 +179,8 @@ body.student{overflow:hidden;overscroll-behavior:none}
 .tag{position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:.75rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:.3em .8em;border-radius:99px}
 .front .tag{background:#fff5d9;color:#9a6a00}
 .back .tag{background:rgba(255,255,255,.14);color:#dfe5ff}
-.txt{position:relative;width:100%;max-height:100%;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-weight:700;line-height:1.25;letter-spacing:-.01em}
+.txt{position:relative;width:100%;max-height:100%;overflow-y:auto;overflow-x:hidden;padding:.08em 0;scrollbar-width:none;white-space:pre-wrap;overflow-wrap:anywhere;font-weight:700;line-height:1.25;letter-spacing:-.01em}
+.txt::-webkit-scrollbar{display:none}
 .hint{position:absolute;bottom:16px;left:0;right:0;font-size:.85rem;color:var(--muted);font-weight:500}
 .speak{position:absolute;bottom:14px;right:14px;width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,.16);color:#fff;font-size:1.25rem;display:grid;place-items:center}
 .speak:active{transform:scale(.94)}
@@ -715,7 +716,7 @@ function fit(el){
   if (vw < 420) size *= .85;
   el.style.fontSize = size + "rem";
   let guard = 0;
-  while (el.scrollHeight > el.clientHeight + 2 && size > .9 && guard++ < 20) { size -= .08; el.style.fontSize = size + "rem"; }
+  while (el.scrollHeight > el.clientHeight + 4 && size > .9 && guard++ < 20) { size -= .08; el.style.fontSize = size + "rem"; }
 }
 
 function currentCard(){ return S.deck.cards[S.order[S.i]]; }
