@@ -354,24 +354,26 @@ function flipSound(toBack){
   if (!soundOn) return;
   const ctx = audioCtx(); if (!ctx) return;
   const t = ctx.currentTime + 0.005;
-  // 1. « swoosh » : bruit filtré dont la fréquence monte
+  // 1. « clac » de carte : bruit très court, filtré dans les aigus
   if (!noiseBuf) {
-    noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.25), ctx.sampleRate);
+    noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.06), ctx.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
   const n = ctx.createBufferSource(); n.buffer = noiseBuf;
-  const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 1.4;
-  bp.frequency.setValueAtTime(700, t); bp.frequency.exponentialRampToValueAtTime(5000, t + 0.13);
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.32, t + 0.035); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-  n.connect(bp).connect(g).connect(ctx.destination); n.start(t); n.stop(t + 0.2);
-  // 2. petite note « pop » qui monte (plus aiguë vers la réponse)
-  const f0 = toBack ? 700 : 520, t2 = t + 0.08;
-  const o = ctx.createOscillator(); o.type = "triangle";
-  o.frequency.setValueAtTime(f0, t2); o.frequency.exponentialRampToValueAtTime(f0 * 1.9, t2 + 0.07);
-  const og = ctx.createGain();
-  og.gain.setValueAtTime(0.0001, t2); og.gain.exponentialRampToValueAtTime(0.22, t2 + 0.012); og.gain.exponentialRampToValueAtTime(0.0001, t2 + 0.18);
-  o.connect(og).connect(ctx.destination); o.start(t2); o.stop(t2 + 0.2);
+  const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 2500;
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.45, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+  n.connect(hp).connect(g).connect(ctx.destination); n.start(t); n.stop(t + 0.05);
+  // 2. notes façon marimba : do-sol qui monte vers la réponse, un sol grave au retour
+  const notes = toBack ? [1046.5, 1568] : [784];
+  notes.forEach((f, i) => {
+    const st = t + 0.03 + i * 0.07;
+    [[1, 0.28, 0.22], [4, 0.06, 0.05]].forEach(([mult, vol, dur]) => {   // fondamentale + harmonique brillante
+      const o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = f * mult;
+      const og = ctx.createGain();
+      og.gain.setValueAtTime(0.0001, st); og.gain.exponentialRampToValueAtTime(vol, st + 0.006); og.gain.exponentialRampToValueAtTime(0.0001, st + dur);
+      o.connect(og).connect(ctx.destination); o.start(st); o.stop(st + dur + 0.02);
+    });
+  });
 }
 function setSound(on){
   soundOn = on; try { localStorage.setItem("fcg-sound", on ? "on" : "off"); } catch {}
@@ -878,7 +880,7 @@ function flip(){
     if (S.deck.audio && card.audio !== false) {
       unlockSpeech();
       const idx = S.i;
-      speakTimer = setTimeout(() => { if (S && S.flipped && S.i === idx) speak(card.a, S.deck.lang); }, soundOn ? 280 : 0);
+      speakTimer = setTimeout(() => { if (S && S.flipped && S.i === idx) speak(card.a, S.deck.lang); }, soundOn ? 340 : 0);
     }
   } else stopSpeak();
 }
