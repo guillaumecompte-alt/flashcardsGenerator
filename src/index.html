@@ -187,6 +187,9 @@ body.student{overflow:hidden;overscroll-behavior:none}
 .stu{height:100vh;height:100dvh;display:flex;flex-direction:column;max-width:920px;margin:0 auto;
   padding:calc(10px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left))}
 .stu-head{display:flex;align-items:center;gap:.6rem;min-height:50px}
+.head-group{display:flex;gap:6px;width:94px;flex:none}
+.head-group.right{justify-content:flex-end}
+.head-btn.off{color:#5f6a8c}
 .stu-titles{flex:1;min-width:0;text-align:center;display:flex;flex-direction:column;align-items:center}
 .stu-titles .kicker{font-size:9px;max-width:100%}
 .stu-titles .kicker::after{content:"";display:inline-block;height:1px;width:24px;background:var(--accent)}
@@ -300,7 +303,7 @@ const IC = {
   share:'<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6"/>',
   dup:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
   sound:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>', play:'<path d="M7 5v14l12-7z"/>',
-  back:'<path d="M15 5l-7 7 7 7"/>', restart:'<path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/>', grid:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+  mute:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="m16.5 9.5 5 5M21.5 9.5l-5 5"/>', back:'<path d="M15 5l-7 7 7 7"/>', restart:'<path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/>', grid:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
   cap:'<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/>', bolt:'<path d="M13 3 5 14h6l-1 7 8-11h-6z"/>',
   search:'<circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/>', wifi:'<path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r=".8"/>',
 };
@@ -331,7 +334,50 @@ function speak(text, lang){
   speechSynthesis.speak(u);
   return true;
 }
-function stopSpeak(){ if (canSpeak) speechSynthesis.cancel(); }
+function stopSpeak(){ clearTimeout(speakTimer); if (canSpeak) speechSynthesis.cancel(); }
+let speakTimer, speechUnlocked = false;
+// iOS/Safari : la 1re lecture doit partir d'un geste de l'utilisateur
+function unlockSpeech(){
+  if (speechUnlocked || !canSpeak) return; speechUnlocked = true;
+  try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } catch {}
+}
+
+/* ---------- Bruitage du retournement (Web Audio, sans fichier) ---------- */
+let soundOn = (() => { try { return localStorage.getItem("fcg-sound") !== "off"; } catch { return true; } })();
+let actx = null, noiseBuf = null;
+function audioCtx(){
+  if (!actx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; try { actx = new C(); } catch { return null; } }
+  if (actx.state === "suspended") actx.resume();
+  return actx;
+}
+function flipSound(toBack){
+  if (!soundOn) return;
+  const ctx = audioCtx(); if (!ctx) return;
+  const t = ctx.currentTime + 0.005;
+  // 1. « swoosh » : bruit filtré dont la fréquence monte
+  if (!noiseBuf) {
+    noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.25), ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const n = ctx.createBufferSource(); n.buffer = noiseBuf;
+  const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 1.4;
+  bp.frequency.setValueAtTime(700, t); bp.frequency.exponentialRampToValueAtTime(5000, t + 0.13);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.32, t + 0.035); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+  n.connect(bp).connect(g).connect(ctx.destination); n.start(t); n.stop(t + 0.2);
+  // 2. petite note « pop » qui monte (plus aiguë vers la réponse)
+  const f0 = toBack ? 700 : 520, t2 = t + 0.08;
+  const o = ctx.createOscillator(); o.type = "triangle";
+  o.frequency.setValueAtTime(f0, t2); o.frequency.exponentialRampToValueAtTime(f0 * 1.9, t2 + 0.07);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.0001, t2); og.gain.exponentialRampToValueAtTime(0.22, t2 + 0.012); og.gain.exponentialRampToValueAtTime(0.0001, t2 + 0.18);
+  o.connect(og).connect(ctx.destination); o.start(t2); o.stop(t2 + 0.2);
+}
+function setSound(on){
+  soundOn = on; try { localStorage.setItem("fcg-sound", on ? "on" : "off"); } catch {}
+  const b = document.getElementById("soundBtn");
+  if (b) { b.innerHTML = ic(on ? "sound" : "mute"); b.classList.toggle("off", !on); b.title = on ? "Couper le bruitage" : "Activer le bruitage"; b.setAttribute("aria-pressed", String(on)); }
+}
 
 /* ======================================================
    INTERFACE PROF
@@ -748,9 +794,14 @@ function startStudent(deck, opts = {}){
   <div class="stu">
     ${opts.preview ? `<div class="preview-banner"><span>Aperçu élève</span></div>` : ""}
     <header class="stu-head">
-      ${opts.preview ? `<button class="head-btn" data-sact="back" title="Retour à l'édition" aria-label="Retour à l'édition">${ic("back")}</button>` : `<a class="head-btn" href="${HUB}" title="Outilothèque" aria-label="Outilothèque">${ic("grid")}</a>`}
+      <div class="head-group">
+        ${opts.preview ? `<button class="head-btn" data-sact="back" title="Retour à l'édition" aria-label="Retour à l'édition">${ic("back")}</button>` : `<a class="head-btn" href="${HUB}" title="Outilothèque" aria-label="Outilothèque">${ic("grid")}</a>`}
+      </div>
       <div class="stu-titles">${deck.classe ? `<span class="kicker">${esc(deck.classe)}</span>` : ""}<h1>${esc(deck.chapitre)}</h1></div>
-      <button class="head-btn" data-sact="restart" title="Recommencer" aria-label="Recommencer">${ic("restart")}</button>
+      <div class="head-group right">
+        <button class="head-btn ${soundOn ? "" : "off"}" id="soundBtn" data-sact="sound" title="${soundOn ? "Couper le bruitage" : "Activer le bruitage"}" aria-label="Bruitage" aria-pressed="${soundOn}">${ic(soundOn ? "sound" : "mute")}</button>
+        <button class="head-btn" data-sact="restart" title="Recommencer" aria-label="Recommencer">${ic("restart")}</button>
+      </div>
     </header>
     <div class="progress" id="progress">
       <div class="bar"><i id="bar"></i></div>
@@ -819,11 +870,16 @@ function flip(){
   S.flipped = !S.flipped;
   flash.classList.remove("enter");
   flash.classList.toggle("flipped", S.flipped);
+  flipSound(S.flipped);
   const card = currentCard();
   if (S.flipped) {
     document.querySelectorAll("#abar .btn").forEach(b => b.disabled = false);
     flash.setAttribute("aria-label", "Réponse : " + card.a);
-    if (S.deck.audio && card.audio !== false) speak(card.a, S.deck.lang);
+    if (S.deck.audio && card.audio !== false) {
+      unlockSpeech();
+      const idx = S.i;
+      speakTimer = setTimeout(() => { if (S && S.flipped && S.i === idx) speak(card.a, S.deck.lang); }, soundOn ? 280 : 0);
+    }
   } else stopSpeak();
 }
 
@@ -866,6 +922,7 @@ function onStudentClick(e){
   if (document.body.className !== "student") return;
   const el = e.target.closest("[data-sact]"); if (!el) return;
   const act = el.dataset.sact;
+  if (act === "sound") { setSound(!soundOn); if (soundOn) flipSound(true); return; }
   if (act === "speak") { e.stopPropagation(); speak(currentCard().a, S.deck.lang); return; }
   if (act === "flip") return flip();
   if (act === "ok") return answer(true);
